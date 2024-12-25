@@ -1,0 +1,29 @@
+Sub VectorNewZero (A As Vec2)
+    A.X = 0
+    A.Y = 0
+End Sub
+Sub VectorNew (A As Vec2, X, Y)
+    A.X = X
+    A.Y = Y
+End Sub
+Sub VectorAdd (A As Vec2, B As Vec2)
+    A.X = A.X + B.X
+    A.Y = A.Y + B.Y
+End Sub
+Sub VectorMul (A As Vec2, B)
+    A.X = A.X * B
+    A.Y = A.Y * B
+End Sub
+Function VectorDot (A As Vec2, B As Vec2)
+    VectorDot = A.X * B.X + A.Y * B.Y
+End Function
+Function VectorLength (A As Vec2)
+    VectorLength = Sqr(A.X * A.X + A.Y * A.Y)
+End Function
+Sub VectorRotate (A As Vec2, Theta)
+    Static B As Vec2, T As Single
+    T = _D2R(Theta)
+    B.X = A.X * Cos(T) - A.Y * Sin(T)
+    B.Y = A.X * Sin(T) + A.Y * Cos(T)
+    A = B
+End Sub
