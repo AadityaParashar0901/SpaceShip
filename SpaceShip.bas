@@ -1,3 +1,5 @@
+'$Dynamic
+'$Include:'QIMG.bi'
 '$Include:'libVector.bi'
 Type Ship
     As Vec2 Pos, Vel, Accel
@@ -8,34 +10,38 @@ Type Ship
 End Type
 Type Planet
     As Vec2 Pos, Vel
-    As Long Mass, Color
+    As Long Color
+    As Double Mass
 End Type
 
 Randomize Timer
 
-Dim Shared StarPos As Vec2, StarIMG&, StarColor As Long, StarMass As _Unsigned Long
+Dim Shared QIMG_SPRITES(0) As QIMG_Sprite
+
+Dim Shared StarPos As Vec2, StarIMG&, StarColor As Long, StarMass As Double
 VectorNewZero StarPos
 StarColor = _RGB32(255, 191, 0)
-StarIMG& = _NewImage(1000, 1000, 32)
+StarIMG& = _NewImage(4000, 4000, 32)
 _Dest StarIMG&
 _Source StarIMG&
-Circle (500, 500), 500, StarColor
-Paint (500, 500), StarColor
+Circle (2000, 2000), 2000, StarColor
+Paint (2000, 2000), StarColor
 _Dest 0
 _Source 0
-StarMass = 10000000
+StarMass = 100000000 '10 ^ 8
 
 Const GridSize = 500
+Const ShipMass = 1
 
-Dim Shared Planets(1 To 5) As Planet
+Dim Shared Planets(1 To 10) As Planet
 InitializePlanets
 
 Dim Shared As Vec2 Camera
 Dim Shared As Ship Ship
 
-Const GravitationalConstant = 1
+Const GravitationalConstant = 0.01
 
-Const ShipMaxVelocity = 5000, ShipMaxAccel = 1000
+Const ShipMaxVelocity = 5000, ShipMaxAccel = 2500
 Const ShipMaxVelocitySquared = ShipMaxVelocity * ShipMaxVelocity
 
 Screen _NewImage(1920, 1080, 32)
@@ -129,7 +135,7 @@ Sub InitializeCamera
     Camera.Y = Ship.Pos.Y
 End Sub
 Sub InitializeShip
-    Ship.Pos.X = 0: Ship.Pos.Y = -800
+    Ship.Pos.X = 0: Ship.Pos.Y = -5000
     Ship.Vel.X = 0
     Ship.Vel.Y = -100
     Ship.Fuel = 100000
@@ -144,7 +150,7 @@ Sub InitializePlanets
     Next I
 End Sub
 Sub OperateShip (Velocity)
-    Dim As Vec2 ShipVelocity_dTime
+    Dim As Vec2 ShipVelocity, ShipVelocity_dTime
     If Abs(Velocity) > 0 Then
         Ship.Accel.X = Velocity * Cos(Ship.Angle) / FPS
         Ship.Accel.Y = Velocity * Sin(Ship.Angle) / FPS
@@ -154,13 +160,18 @@ Sub OperateShip (Velocity)
         Ship.Accel.X = 0
         Ship.Accel.Y = 0
     End If
-    VectorAdd Ship.Vel, Ship.Accel
-    If VectorLength(Ship.Vel) > ShipMaxVelocity Then VectorMul Ship.Vel, ShipMaxVelocity / VectorLength(Ship.Vel)
+    ShipVelocity = Ship.Vel
+    VectorAdd ShipVelocity, Ship.Accel
+    If VectorLength(ShipVelocity) <= ShipMaxVelocity Then Ship.Vel = ShipVelocity
     VectorNew ShipVelocity_dTime, Ship.Vel.X / FPS, Ship.Vel.Y / FPS
     VectorAdd Ship.Pos, ShipVelocity_dTime
     DrawThrust (Abs(Velocity) > 0)
 End Sub
 Sub DrawShip
+    Static SHIP_QIMG
+    If SHIP_QIMG = 0 Then SHIP_QIMG = QIMG_LoadSpriteFromFile&("res\ship.qimg", 240)
+    QIMG_PutRotatedSprite SHIP_QIMG, 0, hW, hH, _R2D(Ship.Angle) + 90, 16
+    Exit Sub
     Dim As Vec2 P1, P2, P3
     P1.X = 0: P1.Y = -8
     P2.X = -5: P2.Y = 8
@@ -173,7 +184,8 @@ Sub DrawShip
     Line (-CPX + P1.X + hW, -CPY + P1.Y + hH)-(-CPX + P2.X + hW, -CPY + P2.Y + hH), -1
     Line (-CPX + P1.X + hW, -CPY + P1.Y + hH)-(-CPX + P3.X + hW, -CPY + P3.Y + hH), -1
 End Sub
-Sub DrawThrust (accel)
+Sub DrawThrust (accel) 'BETA
+    Exit Sub
     Static Thrusts(1 To FPS) As Vec2
     Static ThrustsIntensity(1 To FPS) As _Byte
     Static ThrustI
@@ -194,14 +206,20 @@ End Sub
 Sub DrawStar
     Static As Vec2 P1, P2
     Static __T As Integer
-    If CircleTouchBox(StarPos.X, StarPos.Y, 500, -hW, -hH, hW, hH) Then _PutImage (StarPos.X - Camera.X + hW - 500, StarPos.Y - Camera.Y + hH - 500), StarIMG&
-    If CircleTouchBox(StarPos.X, StarPos.Y, 525, -hW, -hH, hW, hH) = 0 Then Exit Sub
+    If CircleTouchBox(StarPos.X, StarPos.Y, 2000, -hW, -hH, hW, hH) Then _PutImage (StarPos.X - Camera.X + hW - 2000, StarPos.Y - Camera.Y + hH - 2000), StarIMG&
+    If CircleTouchBox(StarPos.X, StarPos.Y, 2025, -hW, -hH, hW, hH) = 0 Then Exit Sub
     __T = __T - (GAMETICK Mod 2 = 0)
     If __T = 2160 Then __T = 0
-    For T = 0 To 360 Step _R2D(_Atan2(1, 530))
-        R = 525 + 5 * Cos(60 * _D2R(T - __T / 6))
+    For T = 0 To 360 Step _R2D(_Atan2(1, 2030))
+        R = 2025 + 10 * Cos(60 * _D2R(T - __T / 2))
         VectorNew P1, R * Cos(_D2R(T)), R * Sin(_D2R(T))
-        VectorNew P2, (R + 10) * Cos(_D2R(T)), (R + 10) * Sin(_D2R(T))
+        VectorNew P2, (R + 4) * Cos(_D2R(T)), (R + 4) * Sin(_D2R(T))
+        Line (P1.X - Camera.X + hW, P1.Y - Camera.Y + hH)-(P2.X - Camera.X + hW, P2.Y - Camera.Y + hH), StarColor
+    Next T
+    For T = 0 To 360 Step _R2D(_Atan2(1, 2030))
+        R = 2025 + 10 * Cos(60 * _D2R(T + __T / 2))
+        VectorNew P1, R * Cos(_D2R(T)), R * Sin(_D2R(T))
+        VectorNew P2, (R + 4) * Cos(_D2R(T)), (R + 4) * Sin(_D2R(T))
         Line (P1.X - Camera.X + hW, P1.Y - Camera.Y + hH)-(P2.X - Camera.X + hW, P2.Y - Camera.Y + hH), StarColor
     Next T
 End Sub
@@ -214,15 +232,17 @@ Sub OperateCamera
     Camera = Ship.Pos
 End Sub
 Sub OperatePhysics
-    ApplyForce Ship.Vel, Ship.Pos, StarPos, 0.01, StarMass
+    ApplyForce Ship.Vel, Ship.Pos, StarPos, ShipMass, StarMass
     For I = LBound(Planets) To UBound(Planets)
-        ApplyForce Ship.Vel, Ship.Pos, Planets(I).Pos, 0.01, Planets(I).Mass
+        ApplyForce Ship.Vel, Ship.Pos, Planets(I).Pos, ShipMass, Planets(I).Mass
         ApplyForce Planets(I).Vel, Planets(I).Pos, StarPos, Planets(I).Mass, StarMass
+        For J = LBound(Planets) To UBound(Planets)
+            If I <> J Then ApplyForce Planets(I).Vel, Planets(I).Pos, Planets(J).Pos, Planets(I).Mass, Planets(J).Mass
+        Next J
         VectorRotate Planets(I).Vel, -90
         Planets(I).Pos.X = Planets(I).Pos.X + Planets(I).Vel.X / FPS
         Planets(I).Pos.Y = Planets(I).Pos.Y + Planets(I).Vel.Y / FPS
     Next I
-    If VectorLength(Ship.Vel) > ShipMaxVelocity Then VectorMul Ship.Vel, ShipMaxVelocity / VectorLength(Ship.Vel)
 End Sub
 Sub ApplyForce (Vel As Vec2, P1 As Vec2, P2 As Vec2, M1, M2)
     F = CalculateForce(P1.X, P1.Y, M1, P2.X, P2.Y, M2)
@@ -271,3 +291,4 @@ Function Min! (A!, B!)
     If A! > B! Then Min! = B! Else Min! = A!
 End Function
 '$Include:'libVector.bm'
+'$Include:'QIMG.bm'
